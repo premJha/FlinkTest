@@ -1,0 +1,84 @@
+
+
+plugins {
+    id 'java'
+//    id 'com.github.johnrengelman.shadow'
+}
+group 'org.example'
+version '1.0'
+repositories {
+    mavenCentral()
+}
+
+configurations { sshAntTask }
+dependencies { sshAntTask 'org.apache.ant:ant-jsch:1.10.9' }
+ant.taskdef(
+        name: 'scp',
+        classname: 'org.apache.tools.ant.taskdefs.optional.ssh.Scp',
+        classpath: configurations.sshAntTask.asPath)
+task CopyJar( )  {
+    dependsOn('jar')
+    doLast {
+        ant.scp(
+                file: file("D:\\Prem\\tech\\Java\\Projects\\flink\\test1\\build\\libs\\test1-1.0.jar"),
+                todir: "pcjha:ahJ011220@adc1140322.us.oracle.com:/scratch",
+                trust: true,
+                password: 'ahJ011220'
+        )
+    }
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Jar File Example',
+                'Implementation-Version': version,
+                'Main-Class': 'p.WindowWordCount'
+    }
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-java
+ //   compile group: 'org.apache.flink', name: 'flink-java', version: '1.2.0'
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-clients
+    //compile group: 'org.apache.flink', name: 'flink-clients_2.11', version: '1.2.0'
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-clients
+    compile group: 'org.apache.flink', name: 'flink-clients_2.12', version: '1.12.0'
+
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-streaming-java
+ //   compile group: 'org.apache.flink', name: 'flink-streaming-java_2.11', version: '1.2.0'
+
+// https://mvnrepository.com/artifact/commons-net/commons-net
+    //compile group: 'commons-net', name: 'commons-net', version: '3.6'
+    // https://mvnrepository.com/artifact/apache-oro/jakarta-oro
+    //compile group: 'apache-oro', name: 'jakarta-oro', version: '2.0.8'
+    // https://mvnrepository.com/artifact/ant/ant-apache-oro
+    //compile group: 'ant', name: 'ant-apache-oro', version: '1.6.5'
+
+
+
+
+ //   compile('org.apache.flink:flink-streaming-java_2.12:1.7.1')
+    //compile('org.apache.flink:flink-core:1.7.1')
+
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-core
+ //   compile group: 'org.apache.flink', name: 'flink-core', version: '1.12.0'
+
+    compile('org.apache.flink:flink-connector-jdbc_2.11:1.12.0')
+   // compile files('D:\\Prem\\Softwares\\DB\\Oracle\\ojdbc6.jar')
+    // https://mvnrepository.com/artifact/org.apache.flink/flink-connector-kafka
+    compile group: 'org.apache.flink', name: 'flink-connector-kafka_2.11', version: '1.12.0'
+// https://mvnrepository.com/artifact/com.oracle.database.jdbc/ojdbc6
+    compile group: 'com.oracle.database.jdbc', name: 'ojdbc6', version: '11.2.0.4'
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.12.0'
+
+
+
+
+}
+
+
+
