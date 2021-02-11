@@ -3,7 +3,6 @@ package flnk;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kafka.jsonCP.User;
-import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -14,8 +13,14 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTime
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.util.Collector;
+import org.apache.kafka.clients.CommonClientConfigs;
+import org.apache.kafka.common.config.SaslConfigs;
+import com.fasterxml.jackson.core.type.TypeReference;
 
+import java.util.List;
 import java.util.Properties;
+
+import kafka.collectd.Metric;
 
 public class ReadingJsonKafka {
 
@@ -25,45 +30,57 @@ public class ReadingJsonKafka {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
+        String username = null;
+        String password = null;
+        for(int i = 0;i < args.length; i++) {
+            switch(args[i]){
+                case "-u":
+                    i++;
+                    username = args[i];
+                    break;
+                case "-p":
+                    i++;
+                    password = args[i];
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown argument: " + args[i]);
+            }
+        }
+        String jaasTemplate = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"" + username + "\" password=\"" + password + "\";";
+
         Properties properties = new Properties();
-        //properties.setProperty("bootstrap.servers", "localhost:9092");
 
-        //String jaasTemplate = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"%s\" password=\"%s\";";
-        properties.setProperty("bootstrap.servers", "localhost:9092");
-        properties.setProperty("group.id", "test");
+        properties.setProperty("bootstrap.servers", "flink.albeadoprism.com:9093");
+        properties.setProperty(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "SASL_PLAINTEXT");
+        properties.setProperty(SaslConfigs.SASL_MECHANISM, "PLAIN");
+        properties.setProperty(SaslConfigs.SASL_JAAS_CONFIG, jaasTemplate);
+
+        // properties.setProperty("group.id", "test");
         ObjectMapper objectMapper = new ObjectMapper();
-        DataStream<String> stream = env
-                .addSource(new FlinkKafkaConsumer<>("quickstart-events", new SimpleStringSchema(), properties));
+        
+        FlinkKafkaConsumer<String> cloudKafka = new FlinkKafkaConsumer<>("collectd-metrics", new SimpleStringSchema(), properties);
+        cloudKafka.setStartFromEarliest();
+        
+        DataStream<String> stream = env.addSource(cloudKafka);
 
-        SingleOutputStreamOperator<User> agedPersons = stream.map(new MapFunction<String, User>() {
-            public User map(String value) {
-                User user = null;
+        SingleOutputStreamOperator<List<Metric>> metrics = stream.map(new MapFunction<String, List<Metric>>() {
+            private static final long serialVersionUID = 1L;
+
+            public List<Metric> map(String value) {
+                List<Metric> metric = null;
                 try {
-                    user = objectMapper.readValue(value, User.class);
+                    metric = objectMapper.readValue(value, new TypeReference<List<Metric>>(){});
                 } catch (JsonProcessingException e) {
                     e.printStackTrace();
                 }
-                return user;
+                return metric;
             }
-        }).filter(u -> u.age > 80);
+        }); //.filter(u -> u.age > 80);
 
 
-        System.out.println("Done processins");
-        agedPersons.print();
-        //dataStream.addSink(new FlinkKafkaConsumer<String>("quickstart-events", new SimpleStringSchema(), properties));
+        System.out.println("Done processing");
+        metrics.print();
 
         env.execute("Test Reading json");
     }
-
-
-
-    public static class Splitter implements FlatMapFunction<String, Tuple2<String, Integer>> {
-        @Override
-        public void flatMap(String sentence, Collector<Tuple2<String, Integer>> out) throws Exception {
-            for (String word: sentence.split(" ")) {
-                out.collect(new Tuple2<String, Integer>(word, 1));
-            }
-        }
-    }
-
 }
