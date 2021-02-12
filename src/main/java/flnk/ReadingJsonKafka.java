@@ -3,6 +3,8 @@ package flnk;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kafka.jsonCP.User;
+
+import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -21,6 +23,7 @@ import java.util.List;
 import java.util.Properties;
 
 import kafka.collectd.Metric;
+import kafka.collectd.RawMetric;
 
 public class ReadingJsonKafka {
 
@@ -63,24 +66,36 @@ public class ReadingJsonKafka {
         
         DataStream<String> stream = env.addSource(cloudKafka);
 
-        SingleOutputStreamOperator<List<Metric>> metrics = stream.map(new MapFunction<String, List<Metric>>() {
+        SingleOutputStreamOperator<Metric> metrics = stream.map(new MapFunction<String, List<RawMetric>>() {
             private static final long serialVersionUID = 1L;
 
-            public List<Metric> map(String value) {
-                List<Metric> metric = null;
+            public List<RawMetric> map(String value) {
+                List<RawMetric> metric = null;
                 try {
-                    metric = objectMapper.readValue(value, new TypeReference<List<Metric>>(){});
+                    metric = objectMapper.readValue(value, new TypeReference<List<RawMetric>>(){});
                 } catch (JsonProcessingException e) {
                     e.printStackTrace();
                 }
                 return metric;
             }
-        }); //.filter(u -> u.age > 80);
-
+        })
+        .flatMap(new SplitMetric())
+        .filter(m -> !m.plugin.equals("irq"));
 
         System.out.println("Done processing");
         metrics.print();
 
         env.execute("Test Reading json");
+    }
+
+    public static class SplitMetric implements FlatMapFunction<List<RawMetric>, Metric> {
+        @Override
+        public void flatMap(List<RawMetric> metrics, Collector<Metric> out ) throws Exception {
+            for(RawMetric m : metrics) {
+                for(int i=0;i < m.dsnames.length;i++) {
+                    out.collect(new Metric(m, i));
+                }
+            }
+        }
     }
 }
