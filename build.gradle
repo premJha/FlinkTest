@@ -74,9 +74,18 @@ dependencies {
 // https://mvnrepository.com/artifact/com.oracle.database.jdbc/ojdbc6
     compile group: 'com.oracle.database.jdbc', name: 'ojdbc6', version: '11.2.0.4'
     compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.12.0'
+    // https://mvnrepository.com/artifact/commons-cli/commons-cli
+    compile group: 'commons-cli', name: 'commons-cli', version: '1.4'
 
 
 
+    task runFlinkJob(type: JavaExec) {
+        group = "Execution"
+        description = "Run the main class with JavaExecTask"
+        classpath = sourceSets.main.runtimeClasspath
+        main = 'flnk.ReadingJsonKafka'
+        args =["-u","flink","-p","Lambda28!","-k","flink.albeadoprism.com:9093","-t","collectd-metrics"]
+    }
 
 }
 
