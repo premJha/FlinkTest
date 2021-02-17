@@ -78,6 +78,7 @@ public class ReadingJsonKafka {
 
         } catch (ParseException e) {
             printUsage(options);
+            System.exit(1);
         }
 
     }
@@ -100,7 +101,7 @@ public class ReadingJsonKafka {
 
     public static void main(String[] args) throws Exception {
 
-        ReadingJsonKafka1 readingJsonKafka1 = new ReadingJsonKafka1();
+        ReadingJsonKafka readingJsonKafka1 = new ReadingJsonKafka();
         readingJsonKafka1.getCommandLineParameters(args);
 
         System.out.println("Basic  Kafka Events Processing in Flink");

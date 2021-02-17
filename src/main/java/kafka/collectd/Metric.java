@@ -10,6 +10,8 @@ public class Metric {
     public String plugin_instance;
     public String type;
     public String type_instance;
+    public String dataStreamId;
+    public String metricId;
 
     public Metric() {}    
 
@@ -46,6 +48,18 @@ public class Metric {
             }
         }
 
+        // Construct identifier Fields
+        this.metricId = "" + this.plugin;
+        if(!this.plugin_instance.equals("")) {
+            this.metricId += '.' + this.plugin_instance;
+        }
+        if(!this.type.equals("")) {
+            this.metricId += '.' + this.type;
+        }
+        if(!this.type_instance.equals("")) {
+            this.type_instance += '.' + this.type_instance;
+        }
+        this.dataStreamId = this.host + "_" + this.metricId;
     }
     
     @Override
